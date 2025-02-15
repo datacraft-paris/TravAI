@@ -56,19 +56,23 @@ def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> Non
     Extracts information from the VLM result and adds a new entry to the journal.
     """
     extracted_ingredients = vlm_result.get("ingredients", [])
+    dish_name = vlm_result.get("dish_name", "Unknown Meal")  # <-- We retrieve the dish name here
+
     new_entry = {
         "datetime": timestamp.isoformat(),
         "photo": uploaded_image,
-        "extracted_ingredients": extracted_ingredients
+        "extracted_ingredients": extracted_ingredients,
+        "dish_name": dish_name  # <-- We store it in the entry
     }
 
     if "journal" not in st.session_state:
         st.session_state["journal"] = []
+
     st.session_state["journal"].append(new_entry)
 
 
 
-#region Meal Analysis & History
+#region meal_analysis_page
 
 def show_meal_analysis_page():
     """
@@ -184,69 +188,84 @@ def show_meal_analysis_page():
                 del st.session_state["edit_ingredients"]
 
 
+#region history_page 
+
 def show_history_page():
     """
-    Renders the History page with improved display:
-    - Shows the date in a friendlier format
-    - Displays the actual image
-    - Shows ingredients in a table
+    Renders the History page in a tabular layout:
+    | Date                | Meal Name       | Photo (thumbnail)    | Voir plus |
+    and displays ingredients below the row if the user clicks 'Voir plus'.
     """
     st.title("History")
-    st.write("View the history of analyzed meals in a more detailed format.")
+    st.write("View the history of analyzed meals in a tabular format with a 'Voir plus' button to reveal ingredients.")
 
     # Check if there's any entry in the journal
-    if "journal" not in st.session_state or len(st.session_state["journal"]) == 0:
-        st.info("No journal entries yet. Go to 'Meal Analysis' (or 'Take Photo' if patient) and analyze a meal to populate the history.")
+    if "journal" not in st.session_state or not st.session_state["journal"]:
+        st.info("No journal entries yet. Go to 'Meal Analysis' (or 'Take Photo' if patient) and analyze a meal.")
         return
 
-    # Loop through each entry in the journal
-    for i, entry in enumerate(st.session_state["journal"], start=1):
-        st.subheader(f"Entry {i}")
+    # Create a place to store which row's ingredients to show
+    if "show_ingredients_for" not in st.session_state:
+        st.session_state["show_ingredients_for"] = None
 
-        # 1) Format and display the date
-        # The entry stores "datetime" as an ISO string (e.g., "2025-02-15T19:49:05.326333")
-        # We can parse it into a Python datetime and reformat it nicely
-        dt_str = entry["datetime"]  # e.g. "2025-02-15T19:49:05.326333"
+    # ----- TABLE HEADER -----
+    # We'll use columns to create a row for the headers
+    header_col1, header_col2, header_col3, header_col4 = st.columns([2, 2, 2, 1])
+    header_col1.write("**Date**")
+    header_col2.write("**Meal Name**")
+    header_col3.write("**Photo**")
+    header_col4.write("")
+
+    # Loop through each journal entry and display one row per entry
+    for i, entry in enumerate(st.session_state["journal"]):
+        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+
+        # 1) Date
+        dt_str = entry["datetime"]  # ISO string (e.g. 2025-02-15T19:49:05.326333)
         try:
             dt_obj = datetime.fromisoformat(dt_str)
-            formatted_date = dt_obj.strftime("%d/%m/%Y %H:%M:%S")  # e.g. "15/02/2025 19:49:05"
+            date_formatted = dt_obj.strftime("%d/%m/%Y %H:%M:%S")
         except ValueError:
-            # If parsing fails for some reason, just use the raw string
-            formatted_date = dt_str
-        st.write(f"**Date:** {formatted_date}")
+            # Fallback if parsing fails
+            date_formatted = dt_str
+        col1.write(date_formatted)
 
-        # 2) Display the image
-        # The entry["photo"] should be a PIL Image object or raw bytes
-        # If you stored the PIL Image, we can show it directly with st.image
+        # 2) Meal Name
+        dish_name = entry.get("dish_name", "Unknown Meal")
+        col2.write(dish_name)
+
+        # 3) Photo (thumbnail)
         photo = entry.get("photo")
         if photo:
-            # If we stored the actual PIL Image object:
+            # If you stored a PIL Image object:
             if isinstance(photo, Image.Image):
-                st.image(photo, caption="Meal Photo", use_container_width=True)
+                col3.image(photo, width=80)
             else:
-                # Otherwise, if we stored bytes, we can reconstruct a PIL image:
+                # Otherwise, if you stored bytes, try converting to a PIL image
                 try:
                     img = Image.open(photo)
-                    st.image(img, caption="Meal Photo", use_container_width=True)
-                except Exception:
-                    st.write("Could not display the image.")
+                    col3.image(img, width=80)
+                except:
+                    col3.write("No image")
         else:
-            st.write("No image found in this entry.")
+            col3.write("No image")
 
-        # 3) Display the extracted ingredients
-        # If entry["extracted_ingredients"] is a list of dicts,
-        # st.table can display them in a tabular format
-        extracted_ingredients = entry.get("extracted_ingredients", [])
-        if extracted_ingredients:
-            st.write("**Extracted Ingredients:**")
-            # Each dict might look like {"ingredient_name": "Tomato", "quantity_grams": 50}
-            # st.table can handle a list of dicts directly
-            st.table(extracted_ingredients)
-        else:
-            st.write("No ingredients found in this entry.")
+        # 4) Voir plus button
+        if col4.button("Voir plus", key=f"voir_plus_{i}"):
+            # Record which entry we want to see ingredients for, then re-run
+            if st.session_state["show_ingredients_for"] == i:
+                # If clicked again, hide it
+                st.session_state["show_ingredients_for"] = None
+            else:
+                st.session_state["show_ingredients_for"] = i
+            st.rerun()
 
-        st.write("---")  # A horizontal rule for visual separation
-
+        # If this row's "Voir plus" is active, display ingredients below
+        if st.session_state["show_ingredients_for"] == i:
+            st.write("**Ingredients:**")
+            ingredients = entry.get("extracted_ingredients", [])
+            st.table(ingredients)
+            st.write("---")  # a horizontal rule to separate entries
 
 
 #region Authentication Page
