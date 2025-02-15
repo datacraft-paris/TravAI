@@ -3,7 +3,8 @@ from PIL import Image
 import json
 from dotenv import load_dotenv
 import base64
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
 from travai.model.inference import get_structured_answer, get_client
@@ -14,12 +15,68 @@ st.set_page_config(layout="wide")
 # region Pydantic Models
 
 class Ingredient(BaseModel):
+    """
+    Represents an ingredient used in a dish.
+
+    Attributes:
+        ingredient_name (str): The name of the ingredient.
+        quantity_grams (float): The quantity of the ingredient in grams.
+    """
     ingredient_name: str
     quantity_grams: float
 
 class Dish(BaseModel):
+    """
+    Represents a dish composed of multiple ingredients.
+
+    Attributes:
+        dish_name (Optional[str]): The name of the dish (can be None).
+        ingredients (List[Ingredient]): A list of ingredients required to prepare the dish.
+            Must contain at least one ingredient.
+    """
     dish_name: str | None
-    ingredients: list[Ingredient]
+    ingredients: list[Ingredient]=Field(min_length=1)
+
+class DishSuggestion(BaseModel):
+    """
+    Represents a suggestion of possible dishes.
+
+    Attributes:
+        possible_dishes (List[Dish]): A list of three suggested dishes.
+            The list must contain between 1 and 3 dishes.
+    """
+    possible_dishes: list[Dish]=Field(min_length=1, max_length=3)
+
+
+
+#region Simulated Credential Storage
+
+MED_CREDENTIALS = {
+    "doctor@hospital.com": "med123",
+}
+PATIENT_CREDENTIALS = {
+    "john.doe@example.com": "patient123",
+}
+
+
+
+#region Check Credentials
+
+def check_credentials(email: str, password: str) -> str | None:
+    """
+    Returns "med" if the email/password is in the MED_CREDENTIALS,
+    "patient" if in PATIENT_CREDENTIALS, or None if invalid.
+    """
+    # Check med
+    if email in MED_CREDENTIALS and MED_CREDENTIALS[email] == password:
+        return "med"
+    # Check patient
+    if email in PATIENT_CREDENTIALS and PATIENT_CREDENTIALS[email] == password:
+        return "patient"
+    return None
+
+
+#region Journal Update Function
 
 
 #region Simulated Credential Storage
@@ -108,40 +165,48 @@ def show_meal_analysis_page():
                             "using the classes Ingredient and Dish"
                         ),
                         base64_image=base64.b64encode(uploaded_file.getvalue()).decode("utf-8"),
-                        response_format=Dish,
+                        response_format=DishSuggestion,
                     )
                     # Convert the result (JSON string) to a Python dict
-                    parsed_result = json.loads(raw_result)
-
+                    parsed_result = json.loads(raw_result)['possible_dishes']
+                    st.session_state['parsed_result'] = parsed_result
+                    dish2id = {dish['dish_name']: i for i, dish in enumerate(parsed_result)}
+                    st.session_state['dish2id'] = dish2id
                     st.success("Analysis complete!")
 
                     # Initialize session state for dish name and ingredients
-                    st.session_state["edit_dish_name"] = parsed_result.get("dish_name", "No dish name provided")
-                    st.session_state["edit_ingredients"] = parsed_result.get("ingredients", [])
-
                 except Exception as e:
                     st.error("An error occurred during image analysis.")
                     st.error(str(e))
                     return
+        if 'dish2id' in st.session_state:
+            choice = st.radio(
+                label="Choose the right dish from the selection",
+                options=st.session_state['dish2id'].keys(),
+                index=None
+            ) if len(st.session_state['dish2id']) > 1 else st.session_state['parsed_result'][0]['dish_name']
+            if choice is not None:
+                st.subheader("Edit Dish and Ingredients Before Saving")
 
         # Editing UI if dish data is available
         if "edit_dish_name" in st.session_state and "edit_ingredients" in st.session_state:
             st.subheader("Edit Dish and Ingredients Before Saving")
 
-            # Edit dish name
-            st.session_state["edit_dish_name"] = st.text_input(
-                "Dish Name",
-                value=st.session_state["edit_dish_name"],
-            )
+                # Edit the dish name
+                st.session_state["edit_dish_name"] = st.text_input(
+                    "Dish Name",
+                    value=choice,
+                )
 
-            # Editable table for ingredients
-            ingredients_data = st.session_state["edit_ingredients"]
+                # Editable table for ingredients
+                ingredients_data = st.session_state['parsed_result'][st.session_state['dish2id'][choice]].get('ingredients')
 
+            # Use a while loop to safely remove items without messing up indexing
             i = 0
             while i < len(ingredients_data):
                 row = ingredients_data[i]
                 c1, c2, c3 = st.columns([3, 3, 1])
-
+                
                 with c1:
                     new_name = st.text_input(
                         f"Ingredient Name {i}",
@@ -156,36 +221,50 @@ def show_meal_analysis_page():
                         key=f"qty_{i}"
                     )
                 with c3:
+                    # Minus button to remove the row
                     remove_btn_label = f"Remove {i}"
                     if st.button("–", key=remove_btn_label):
                         ingredients_data.pop(i)
+                        # Force a re-run so the row disappears immediately
                         st.rerun()
 
+                # Update the row with user inputs
                 row["ingredient_name"] = new_name
                 row["quantity_grams"] = new_qty
+
                 i += 1
 
-            # Plus button to add a new ingredient
-            if st.button("+ Add Ingredient"):
-                ingredients_data.append({
-                    "ingredient_name": "",
-                    "quantity_grams": 0
-                })
-                st.rerun()
+                # Plus button to add a new ingredient
+                if st.button("+ Add Ingredient"):
+                    ingredients_data.append({
+                        "ingredient_name": "",
+                        "quantity_grams": 0
+                    })
+                    st.rerun()
 
-            # Prepare final data
-            dish_data = {
-                "dish_name": st.session_state["edit_dish_name"],
-                "ingredients": ingredients_data
-            }
+                # 3) Once the user is happy, let them download or save to journal
+                dish_data = {
+                    "dish_name": choice,
+                    "ingredients": ingredients_data
+                }
 
-            # Save to Journal
-            if st.button("Save to Journal"):
-                update_journal(dish_data, image, datetime.now())
-                st.info("Your meal analysis has been added to the journal.")
-                # Clear editing state
-                del st.session_state["edit_dish_name"]
-                del st.session_state["edit_ingredients"]
+                # Download updated JSON
+                updated_json_str = json.dumps(dish_data, indent=4)
+                st.download_button(
+                    label="Download Updated JSON",
+                    data=updated_json_str,
+                    file_name="meal_analysis.json",
+                    mime="application/json"
+                )
+
+                # Button to finalize and add to the journal
+                if st.button("Save to Journal"):
+                    # Save final data to journal
+                    update_journal(dish_data, image, datetime.now())
+                    st.info("Your meal analysis has been added to the journal.")
+                    # Optionally clear or reset the editing data
+                    del st.session_state['dish2id']
+                    uploaded_file = None
 
 
 #region history_page 
