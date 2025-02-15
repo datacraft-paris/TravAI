@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import Meal, Patient
+from models import Meal, Patient, DetectedIngredient
 from datetime import datetime
 
 def create_meal(patient_id: int, date_start: datetime, image_path: str, name: str):
@@ -127,22 +127,27 @@ def update_meal(meal_id: int, date_start: datetime = None, image_path: str = Non
 
 def delete_meal(meal_id: int):
     """
-    Deletes a meal from the database.
+    Deletes a meal from the database and removes all associated detected ingredients.
 
     :param meal_id: The ID of the meal to delete
     :return: True if deleted successfully, False otherwise
     """
     session = SessionLocal()
     try:
+        # Find the meal by ID
         meal = session.query(Meal).filter(Meal.meal_id == meal_id).first()
         if not meal:
             print("Meal not found.")
             return False
 
+        # Delete all detected ingredients linked to this meal
+        session.query(DetectedIngredient).filter(DetectedIngredient.meal_id == meal_id).delete()
+
+        # Now delete the meal
         session.delete(meal)
         session.commit()
 
-        print(f"Meal deleted: {meal.name} (Meal ID: {meal.meal_id})")
+        print(f"Meal deleted: {meal.name} (All associated detected ingredients removed)")
         return True
 
     except Exception as e:
