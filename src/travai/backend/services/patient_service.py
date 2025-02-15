@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import Patient, Doctor
+from models import Patient, Doctor, Goal
 
 def create_patient(first_name: str, last_name: str, email: str, password: str, doctor_id: int = None):
     """
@@ -127,6 +127,9 @@ def delete_patient(email: str):
         if not patient:
             print("Patient not found.")
             return False
+
+        # Delete all goals linked to this patient
+        session.query(Goal).filter(Goal.patient_id == patient.patient_id).delete()
 
         session.delete(patient)
         session.commit()
