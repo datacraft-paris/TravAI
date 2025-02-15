@@ -88,24 +88,6 @@ PATIENT_CREDENTIALS = {
     "john.doe@example.com": "patient123",
 }
 
-
-
-#region Check Credentials
-
-def check_credentials(email: str, password: str) -> str | None:
-    """
-    Returns "med" if the email/password is in the MED_CREDENTIALS,
-    "patient" if in PATIENT_CREDENTIALS, or None if invalid.
-    """
-    # Check med
-    if email in MED_CREDENTIALS and MED_CREDENTIALS[email] == password:
-        return "med"
-    # Check patient
-    if email in PATIENT_CREDENTIALS and PATIENT_CREDENTIALS[email] == password:
-        return "patient"
-    return None
-
-
 #region Journal Update Function
 
 def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> None:
@@ -188,10 +170,6 @@ def show_meal_analysis_page():
             if choice is not None:
                 st.subheader("Edit Dish and Ingredients Before Saving")
 
-        # Editing UI if dish data is available
-        if "edit_dish_name" in st.session_state and "edit_ingredients" in st.session_state:
-            st.subheader("Edit Dish and Ingredients Before Saving")
-
                 # Edit the dish name
                 st.session_state["edit_dish_name"] = st.text_input(
                     "Dish Name",
@@ -201,38 +179,37 @@ def show_meal_analysis_page():
                 # Editable table for ingredients
                 ingredients_data = st.session_state['parsed_result'][st.session_state['dish2id'][choice]].get('ingredients')
 
-            # Use a while loop to safely remove items without messing up indexing
-            i = 0
-            while i < len(ingredients_data):
-                row = ingredients_data[i]
-                c1, c2, c3 = st.columns([3, 3, 1])
-                
-                with c1:
-                    new_name = st.text_input(
-                        f"Ingredient Name {i}",
-                        value=row["ingredient_name"],
-                        key=f"name_{i}"
-                    )
-                with c2:
-                    new_qty = st.number_input(
-                        f"Quantity (g) {i}",
-                        value=float(row["quantity_grams"]),
-                        step=1.0,
-                        key=f"qty_{i}"
-                    )
-                with c3:
-                    # Minus button to remove the row
-                    remove_btn_label = f"Remove {i}"
-                    if st.button("–", key=remove_btn_label):
-                        ingredients_data.pop(i)
-                        # Force a re-run so the row disappears immediately
-                        st.rerun()
+                # Use a while loop to safely remove items without messing up indexing
+                i = 0
+                while i < len(ingredients_data):
+                    row = ingredients_data[i]
+                    c1, c2, c3 = st.columns([3, 3, 1])
+                    with c1:
+                        new_name = st.text_input(
+                            f"Ingredient Name {i}",
+                            value=row["ingredient_name"],
+                            key=f"name_{i}"
+                        )
+                    with c2:
+                        new_qty = st.number_input(
+                            f"Quantity (g) {i}",
+                            value=float(row["quantity_grams"]),
+                            step=1.0,
+                            key=f"qty_{i}"
+                        )
+                    with c3:
+                        # Minus button to remove the row
+                        remove_btn_label = f"Remove {i}"
+                        if st.button("–", key=remove_btn_label):
+                            ingredients_data.pop(i)
+                            # Force a re-run so the row disappears immediately
+                            st.rerun()
 
-                # Update the row with user inputs
-                row["ingredient_name"] = new_name
-                row["quantity_grams"] = new_qty
+                    # Update the row with user inputs
+                    row["ingredient_name"] = new_name
+                    row["quantity_grams"] = new_qty
 
-                i += 1
+                    i += 1
 
                 # Plus button to add a new ingredient
                 if st.button("+ Add Ingredient"):
