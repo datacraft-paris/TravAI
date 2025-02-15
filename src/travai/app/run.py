@@ -7,8 +7,6 @@ from pydantic import BaseModel, Field
 from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
-from travai.model.inference import get_structured_answer, get_client
-
 st.set_page_config(layout="wide")
 
 
