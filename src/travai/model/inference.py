@@ -90,7 +90,7 @@ def get_structured_answer(
                 ],
             },
         ],
-        max_tokens=512,
+        max_tokens=None,
         temperature=1.0,
         top_p=1,
         presence_penalty=0,
