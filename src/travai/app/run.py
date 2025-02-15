@@ -34,18 +34,17 @@ class Dish(BaseModel):
         ingredients (List[Ingredient]): A list of ingredients required to prepare the dish.
             Must contain at least one ingredient.
     """
-    dish_name: str | None
-    ingredients: list[Ingredient]=Field(min_length=1)
+    dish_name: str
+    ingredients: list[Ingredient]
 
 class DishSuggestion(BaseModel):
     """
     Represents a suggestion of possible dishes.
 
     Attributes:
-        possible_dishes (List[Dish]): A list of three suggested dishes.
-            The list must contain between 1 and 3 dishes.
+        possible_dishes (List[Dish]): A list of suggested dishes.
     """
-    possible_dishes: list[Dish]=Field(min_length=1, max_length=3)
+    possible_dishes: list[Dish]
 
 
 
@@ -141,7 +140,7 @@ def show_meal_analysis_page():
                 try:
                     raw_result = get_structured_answer(
                         client=st.session_state["client"],
-                        model_name="pixtral-12b-2409",
+                        model_name="gpt-4o",
                         prompt=(
                             "Describe the list of ingredients required to make this dish "
                             "using the classes Ingredient and Dish"
@@ -149,6 +148,7 @@ def show_meal_analysis_page():
                         base64_image=base64.b64encode(uploaded_file.getvalue()).decode("utf-8"),
                         response_format=DishSuggestion,
                     )
+                    print(raw_result)
                     # Convert the result (JSON string) to a Python dict
                     parsed_result = json.loads(raw_result)['possible_dishes']
                     st.session_state['parsed_result'] = parsed_result
