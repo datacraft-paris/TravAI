@@ -5,8 +5,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-from src.travai.database import Base
-from src.travai.models import Food, Meal, DetectedFood
+from backend.database import Base
+import backend.models 
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
