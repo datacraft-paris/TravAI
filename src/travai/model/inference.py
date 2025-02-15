@@ -94,7 +94,7 @@ def get_structured_answer(
         temperature=1.0,
         top_p=1,
         presence_penalty=0,
-        response_format=ImageModel,
+        response_format=response_format,
     )
 
 
