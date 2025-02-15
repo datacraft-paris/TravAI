@@ -1,4 +1,4 @@
-from openai import OpenAI, Stream
+from openai import OpenAI
 import os
 import base64
 from pydantic import BaseModel
@@ -52,7 +52,7 @@ def get_structured_answer(
     prompt: str,
     base64_image: str,
     response_format: BaseModel,
-) -> Stream:
+) -> str:
     """Generates answer with client using model_name, a prompt and the base64 representation of the image
 
     Parameters
@@ -70,8 +70,8 @@ def get_structured_answer(
 
     Returns
     -------
-    Stream
-        The client response object
+    str
+        The BaseModel instance as str
     """
     return client.beta.chat.completions.parse(
         model=model_name,
@@ -95,7 +95,7 @@ def get_structured_answer(
         top_p=1,
         presence_penalty=0,
         response_format=response_format,
-    )
+    ).choices[0].message.content
 
 
 def main() -> None:
@@ -104,12 +104,11 @@ def main() -> None:
     response = get_structured_answer(
         client=client,
         model_name="pixtral-12b-2409",
-        prompt="What is this image about?",
+        prompt="Describe the Meal present in the image",
         base64_image=b64_image,
         response_format=ImageModel,
     )
-    print(response.choices[0].message.content)
-    print(response.choices[0].message.parsed)
+    print(response)
     return
 
 

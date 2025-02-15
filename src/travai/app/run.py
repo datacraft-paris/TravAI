@@ -1,17 +1,21 @@
 import streamlit as st
 from PIL import Image
-import io
 import json
+from dotenv import load_dotenv
+import base64
+from pydantic import BaseModel
+from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
 st.set_page_config(layout="wide")
 
+class Ingredient(BaseModel):
+    ingredient_name: str
+    quantity_grams: float
 
-def api_VLM():
-    file_path = "/Users/datacraft/TravAI/test.json"
-    with open(file_path, 'r') as file:
-        result = json.load(file)
-    return(result)
+class Dish(BaseModel):
+    dish_name: str | None
+    ingredients: list[Ingredient]
 
 def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> None:
 
@@ -59,8 +63,14 @@ def show_meal_analysis_page():
             with st.spinner("Analyzing image..."):
                 try:
                     # Call the VLM to analyze
-                    vlm_result = api_VLM()
-
+                    vlm_result = get_structured_answer(
+                        client=st.session_state['client'],
+                        model_name="pixtral-12b-2409",
+                        prompt="Describe the list of ingredients required to make this dish using the classes Ingredient and Dish",
+                        base64_image=base64.b64encode(uploaded_file.getvalue()).decode('utf-8'),
+                        response_format=Dish,
+                    )
+                    vlm_result = json.loads(vlm_result)
                     # Display the raw JSON result
                     st.success("Analysis complete!")
                     st.json(vlm_result)
@@ -100,13 +110,15 @@ def show_history_page():
         })
 
     # Afficher les données sous forme de tableau
-    st.table(table_data)
+    st.data_editor(table_data)
 
 
 def main():
     """
     Main function that handles page navigation and renders the selected page.
     """
+    load_dotenv()
+    st.session_state['client'] = get_client()
     st.sidebar.title("Navigation")
     page_choice = st.sidebar.radio("Go to", ["Meal Analysis", "History"])
 
