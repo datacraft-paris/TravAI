@@ -1,16 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from .database import Base
+from database import Base
 
-class Patient(Base):
-    __tablename__ = "patients"
 
-    patient_id = Column(Integer, primary_key=True, index=True)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    email = Column(String, nullable=False)
-    password = Column(String, nullable=False)
 
 class Doctor(Base):
     __tablename__ = "doctors"
@@ -20,7 +13,16 @@ class Doctor(Base):
     last_name = Column(String, nullable=False)
     email = Column(String, nullable=False)
     password = Column(String, nullable=False)
-    patients = relationship("Patient", back_populates="doctor")
+
+class Patient(Base):
+    __tablename__ = "patients"
+
+    patient_id = Column(Integer, primary_key=True, index=True)
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    email = Column(String, nullable=False)
+    password = Column(String, nullable=False)
+    doctor_id = Column(Integer, ForeignKey("doctors.doctor_id"), nullable=True)
 
 class Meal(Base):
     __tablename__ = "meals"
