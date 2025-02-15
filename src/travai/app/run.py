@@ -4,10 +4,14 @@ import json
 from dotenv import load_dotenv
 import base64
 from pydantic import BaseModel
-from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
+from travai.model.inference import get_structured_answer, get_client
+
 st.set_page_config(layout="wide")
+
+
+# region Pydantic Models
 
 class Ingredient(BaseModel):
     ingredient_name: str
@@ -17,26 +21,56 @@ class Dish(BaseModel):
     dish_name: str | None
     ingredients: list[Ingredient]
 
+
+#region Simulated Credential Storage
+
+MED_CREDENTIALS = {
+    "doctor@hospital.com": "med123",
+}
+PATIENT_CREDENTIALS = {
+    "john.doe@example.com": "patient123",
+}
+
+
+
+#region Check Credentials
+
+def check_credentials(email: str, password: str) -> str | None:
+    """
+    Returns "med" if the email/password is in the MED_CREDENTIALS,
+    "patient" if in PATIENT_CREDENTIALS, or None if invalid.
+    """
+    # Check med
+    if email in MED_CREDENTIALS and MED_CREDENTIALS[email] == password:
+        return "med"
+    # Check patient
+    if email in PATIENT_CREDENTIALS and PATIENT_CREDENTIALS[email] == password:
+        return "patient"
+    return None
+
+
+#region Journal Update Function
+
 def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> None:
-
+    """
+    Extracts information from the VLM result and adds a new entry to the journal.
+    """
     extracted_ingredients = vlm_result.get("ingredients", [])
-
     new_entry = {
         "datetime": timestamp.isoformat(),
-        "photo": uploaded_image,  
+        "photo": uploaded_image,
         "extracted_ingredients": extracted_ingredients
     }
 
-    # Initialize journal if it doesn't exist yet
     if "journal" not in st.session_state:
         st.session_state["journal"] = []
-
-    # Append the new entry
     st.session_state["journal"].append(new_entry)
 
 
+
+#region Meal Analysis & History (Med) Pages
+
 def show_meal_analysis_page():
-    
     """
     Renders the Meal Analysis page:
     - Lets the user upload an image
@@ -44,7 +78,7 @@ def show_meal_analysis_page():
     - Lets the user edit the dish name & ingredients (CRUD)
     - Updates the journal on demand
     """
-    st.title("Meal Analysis")
+    st.title("Meal Analysis (Med)")
     st.write("Upload an image of your meal to analyze its content.")
 
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
@@ -62,11 +96,13 @@ def show_meal_analysis_page():
         if st.button("Analyze Image"):
             with st.spinner("Analyzing image..."):
                 try:
-                    # Call the LLM / VLM
                     raw_result = get_structured_answer(
                         client=st.session_state["client"],
                         model_name="pixtral-12b-2409",
-                        prompt="Describe the list of ingredients required to make this dish using the classes Ingredient and Dish",
+                        prompt=(
+                            "Describe the list of ingredients required to make this dish "
+                            "using the classes Ingredient and Dish"
+                        ),
                         base64_image=base64.b64encode(uploaded_file.getvalue()).decode("utf-8"),
                         response_format=Dish,
                     )
@@ -74,7 +110,7 @@ def show_meal_analysis_page():
                     parsed_result = json.loads(raw_result)
 
                     st.success("Analysis complete!")
-                    
+
                     # Initialize session state for dish name and ingredients
                     st.session_state["edit_dish_name"] = parsed_result.get("dish_name", "No dish name provided")
                     st.session_state["edit_ingredients"] = parsed_result.get("ingredients", [])
@@ -84,10 +120,11 @@ def show_meal_analysis_page():
                     st.error(str(e))
                     return
 
+        # Editing UI if dish data is available
         if "edit_dish_name" in st.session_state and "edit_ingredients" in st.session_state:
             st.subheader("Edit Dish and Ingredients Before Saving")
 
-            # Edit the dish name
+            # Edit dish name
             st.session_state["edit_dish_name"] = st.text_input(
                 "Dish Name",
                 value=st.session_state["edit_dish_name"],
@@ -96,12 +133,11 @@ def show_meal_analysis_page():
             # Editable table for ingredients
             ingredients_data = st.session_state["edit_ingredients"]
 
-            # Use a while loop to safely remove items without messing up indexing
             i = 0
             while i < len(ingredients_data):
                 row = ingredients_data[i]
                 c1, c2, c3 = st.columns([3, 3, 1])
-                
+
                 with c1:
                     new_name = st.text_input(
                         f"Ingredient Name {i}",
@@ -116,17 +152,13 @@ def show_meal_analysis_page():
                         key=f"qty_{i}"
                     )
                 with c3:
-                    # Minus button to remove the row
                     remove_btn_label = f"Remove {i}"
                     if st.button("–", key=remove_btn_label):
                         ingredients_data.pop(i)
-                        # Force a re-run so the row disappears immediately
                         st.rerun()
 
-                # Update the row with user inputs
                 row["ingredient_name"] = new_name
                 row["quantity_grams"] = new_qty
-
                 i += 1
 
             # Plus button to add a new ingredient
@@ -137,7 +169,7 @@ def show_meal_analysis_page():
                 })
                 st.rerun()
 
-            # 3) Once the user is happy, let them download or save to journal
+            # Prepare final data
             dish_data = {
                 "dish_name": st.session_state["edit_dish_name"],
                 "ingredients": ingredients_data
@@ -152,18 +184,20 @@ def show_meal_analysis_page():
                 mime="application/json"
             )
 
-            # Button to finalize and add to the journal
+            # Save to Journal
             if st.button("Save to Journal"):
-                # Save final data to journal
                 update_journal(dish_data, image, datetime.now())
                 st.info("Your meal analysis has been added to the journal.")
-                # Optionally clear or reset the editing data
+                # Clear editing state
                 del st.session_state["edit_dish_name"]
                 del st.session_state["edit_ingredients"]
 
 
 def show_history_page():
-    st.title("History")
+    """
+    Renders the History page (Med).
+    """
+    st.title("History (Med)")
     st.write("View and edit the history of analyzed meals.")
 
     if "journal" not in st.session_state or len(st.session_state["journal"]) == 0:
@@ -178,26 +212,75 @@ def show_history_page():
             "extracted_ingredients": entry["extracted_ingredients"],
         })
 
-    # Afficher les données sous forme de tableau
     st.data_editor(table_data)
 
 
+#region Patient Page
+
+def show_patient_page():
+    """
+    If the user is a patient, we could show a different interface.
+    This is just a placeholder. Customize as needed.
+    """
+    st.title("Patient Page")
+    st.write("Welcome to the Patient interface!")
+
+
+
+#region Authentication Page
+
+def show_authentication_page():
+    """
+    Displays a login form for email + password.
+    If valid, sets session state accordingly and reruns.
+    """
+    st.title("Login")
+
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        role = check_credentials(email, password)
+        if role is None:
+            st.error("Invalid email or password. Please try again.")
+        else:
+            st.session_state["logged_in"] = True
+            st.session_state["role"] = role
+            st.rerun()
+
+
+
+#region Main
+
 def main():
-    """
-    Main function that handles page navigation and renders the selected page.
-    """
     load_dotenv()
-    st.session_state['client'] = get_client()
-    load_dotenv()
+    if "client" not in st.session_state:
+        st.session_state["client"] = get_client()
 
-    # Create two tabs at the top
-    tab1, tab2 = st.tabs(["Meal Analysis", "History"])
+    # Ensure we have a 'logged_in' and 'role' in session state
+    if "logged_in" not in st.session_state:
+        st.session_state["logged_in"] = False
+    if "role" not in st.session_state:
+        st.session_state["role"] = None
 
-    with tab1:
-        show_meal_analysis_page()
+    # If not logged in, show login page
+    if not st.session_state["logged_in"]:
+        show_authentication_page()
+    else:
+        # Depending on the role, show different pages
+        if st.session_state["role"] == "med":
+            # Create two tabs for "Meal Analysis" and "History"
+            tab1, tab2 = st.tabs(["Meal Analysis", "History"])
+            with tab1:
+                show_meal_analysis_page()
+            with tab2:
+                show_history_page()
 
-    with tab2:
-        show_history_page()
+        elif st.session_state["role"] == "patient":
+            # Show a simple Patient page
+            show_patient_page()
+        else:
+            st.error("Unknown role. Please log out and try again.")
 
 
 if __name__ == "__main__":
