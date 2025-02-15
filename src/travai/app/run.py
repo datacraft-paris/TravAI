@@ -68,7 +68,7 @@ def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> Non
 
 
 
-#region Meal Analysis & History (Med) Pages
+#region Meal Analysis & History
 
 def show_meal_analysis_page():
     """
@@ -217,13 +217,6 @@ def show_history_page():
 
 #region Patient Page
 
-def show_patient_page():
-    """
-    If the user is a patient, we could show a different interface.
-    This is just a placeholder. Customize as needed.
-    """
-    st.title("Patient Page")
-    st.write("Welcome to the Patient interface!")
 
 
 
@@ -254,33 +247,36 @@ def show_authentication_page():
 
 def main():
     load_dotenv()
+    # Ensure we have a client
     if "client" not in st.session_state:
         st.session_state["client"] = get_client()
 
-    # Ensure we have a 'logged_in' and 'role' in session state
+    # Ensure we have login info
     if "logged_in" not in st.session_state:
         st.session_state["logged_in"] = False
     if "role" not in st.session_state:
         st.session_state["role"] = None
 
-    # If not logged in, show login page
+    # If not logged in, show login
     if not st.session_state["logged_in"]:
         show_authentication_page()
     else:
-        # Depending on the role, show different pages
-        if st.session_state["role"] == "med":
-            # Create two tabs for "Meal Analysis" and "History"
-            tab1, tab2 = st.tabs(["Meal Analysis", "History"])
+        # If logged in, check role
+        if st.session_state["role"] == "patient":
+            # Patient has two tabs: Take Photo + History
+            tab1, tab2 = st.tabs(["Take Photo", "History"])
             with tab1:
                 show_meal_analysis_page()
             with tab2:
                 show_history_page()
 
-        elif st.session_state["role"] == "patient":
-            # Show a simple Patient page
-            show_patient_page()
+        elif st.session_state["role"] == "med":
+            # Med sees only the History page
+            show_history_page()
         else:
             st.error("Unknown role. Please log out and try again.")
+
+
 
 
 if __name__ == "__main__":
