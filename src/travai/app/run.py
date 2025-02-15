@@ -186,28 +186,66 @@ def show_meal_analysis_page():
 
 def show_history_page():
     """
-    Renders the History page (Med).
+    Renders the History page with improved display:
+    - Shows the date in a friendlier format
+    - Displays the actual image
+    - Shows ingredients in a table
     """
-    st.title("History (Med)")
-    st.write("View and edit the history of analyzed meals.")
+    st.title("History")
+    st.write("View the history of analyzed meals in a more detailed format.")
 
+    # Check if there's any entry in the journal
     if "journal" not in st.session_state or len(st.session_state["journal"]) == 0:
-        st.info("No journal entries yet. Go to 'Meal Analysis' and analyze a meal to populate the history.")
+        st.info("No journal entries yet. Go to 'Meal Analysis' (or 'Take Photo' if patient) and analyze a meal to populate the history.")
         return
 
-    table_data = []
-    for entry in st.session_state["journal"]:
-        table_data.append({
-            "datetime": entry["datetime"],
-            "photo": "Image data (not displayed)",
-            "extracted_ingredients": entry["extracted_ingredients"],
-        })
+    # Loop through each entry in the journal
+    for i, entry in enumerate(st.session_state["journal"], start=1):
+        st.subheader(f"Entry {i}")
 
-    st.data_editor(table_data)
+        # 1) Format and display the date
+        # The entry stores "datetime" as an ISO string (e.g., "2025-02-15T19:49:05.326333")
+        # We can parse it into a Python datetime and reformat it nicely
+        dt_str = entry["datetime"]  # e.g. "2025-02-15T19:49:05.326333"
+        try:
+            dt_obj = datetime.fromisoformat(dt_str)
+            formatted_date = dt_obj.strftime("%d/%m/%Y %H:%M:%S")  # e.g. "15/02/2025 19:49:05"
+        except ValueError:
+            # If parsing fails for some reason, just use the raw string
+            formatted_date = dt_str
+        st.write(f"**Date:** {formatted_date}")
 
+        # 2) Display the image
+        # The entry["photo"] should be a PIL Image object or raw bytes
+        # If you stored the PIL Image, we can show it directly with st.image
+        photo = entry.get("photo")
+        if photo:
+            # If we stored the actual PIL Image object:
+            if isinstance(photo, Image.Image):
+                st.image(photo, caption="Meal Photo", use_container_width=True)
+            else:
+                # Otherwise, if we stored bytes, we can reconstruct a PIL image:
+                try:
+                    img = Image.open(photo)
+                    st.image(img, caption="Meal Photo", use_container_width=True)
+                except Exception:
+                    st.write("Could not display the image.")
+        else:
+            st.write("No image found in this entry.")
 
-#region Patient Page
+        # 3) Display the extracted ingredients
+        # If entry["extracted_ingredients"] is a list of dicts,
+        # st.table can display them in a tabular format
+        extracted_ingredients = entry.get("extracted_ingredients", [])
+        if extracted_ingredients:
+            st.write("**Extracted Ingredients:**")
+            # Each dict might look like {"ingredient_name": "Tomato", "quantity_grams": 50}
+            # st.table can handle a list of dicts directly
+            st.table(extracted_ingredients)
+        else:
+            st.write("No ingredients found in this entry.")
 
+        st.write("---")  # A horizontal rule for visual separation
 
 
 
@@ -266,8 +304,6 @@ def main():
             show_history_page()
         else:
             st.error("Unknown role. Please log out and try again.")
-
-
 
 
 if __name__ == "__main__":
