@@ -175,15 +175,6 @@ def show_meal_analysis_page():
                 "ingredients": ingredients_data
             }
 
-            # Download updated JSON
-            updated_json_str = json.dumps(dish_data, indent=4)
-            st.download_button(
-                label="Download Updated JSON",
-                data=updated_json_str,
-                file_name="meal_analysis.json",
-                mime="application/json"
-            )
-
             # Save to Journal
             if st.button("Save to Journal"):
                 update_journal(dish_data, image, datetime.now())
