@@ -73,7 +73,7 @@ def check_credentials(email: str, password: str) -> str | None:
     return None
 
 
-#region Journal Update Function
+
 
 
 #region Simulated Credential Storage
@@ -146,7 +146,6 @@ def show_meal_analysis_page():
                         base64_image=base64.b64encode(uploaded_file.getvalue()).decode("utf-8"),
                         response_format=DishSuggestion,
                     )
-                    print(raw_result)
                     # Convert the result (JSON string) to a Python dict
                     parsed_result = json.loads(raw_result)['possible_dishes']
                     st.session_state['parsed_result'] = parsed_result
@@ -246,56 +245,96 @@ def show_meal_analysis_page():
 
 def show_history_page():
     """
-    Renders the History page in a tabular layout:
-    | Date                | Meal Name       | Photo (thumbnail)    | Voir plus |
-    and displays ingredients below the row if the user clicks 'Voir plus'.
+    Renders the History page with the histogram and metrics displayed at the top,
+    followed by the table of analyzed meals.
     """
     st.title("History")
     st.write("View the history of analyzed meals in a tabular format with a 'Voir plus' button to reveal ingredients.")
 
-    # Check if there's any entry in the journal
-    if "journal" not in st.session_state or not st.session_state["journal"]:
+    # Afficher les métriques et l'histogramme uniquement s'il y a des entrées dans le journal
+    if "journal" in st.session_state and st.session_state["journal"]:
+        # --- Calcul de la quantité totale par repas ---
+        total_grams_list = []
+        for entry in st.session_state["journal"]:
+            ingredients = entry.get("extracted_ingredients", [])
+            total = sum(item.get("quantity_grams", 0) for item in ingredients)
+            total_grams_list.append(total)
+
+        # Créer un DataFrame avec un identifiant pour chaque repas
+        import pandas as pd
+        df_meals = pd.DataFrame({
+            "Repas": [f"Repas {i+1}" for i in range(len(total_grams_list))],
+            "Quantité (g)": total_grams_list
+        })
+
+        # Créer le graphique à barres avec Altair : 
+        # - x : le repas (catégoriel)
+        # - y : la quantité totale consommée
+        import altair as alt
+        bar_chart = alt.Chart(df_meals).mark_bar(opacity=0.7).encode(
+            x=alt.X("Repas:N", title="Repas"),
+            y=alt.Y("Quantité (g):Q", title="Quantité Totale (g)")
+        ).properties(
+            title="Quantité mangée par repas",
+            width=600,
+            height=300
+)
+
+        st.altair_chart(bar_chart, use_container_width=True)
+
+        # --- Affichage des métriques ---
+        # Ici, on utilise des valeurs fixes pour l'instant
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric(label="Score de rigueur", value="10")
+        with col2:
+            st.metric(label="Taux d'objectif atteint", value="3")
+        with col3:
+            st.metric(label="Moyenne de la métrique traquée", value="5")
+    else:
         st.info("No journal entries yet. Go to 'Meal Analysis' (or 'Take Photo' if patient) and analyze a meal.")
+
+    st.write("---")  # Séparateur visuel entre les métriques/histogramme et le tableau
+
+    # Si aucune entrée dans le journal, on arrête ici
+    if "journal" not in st.session_state or not st.session_state["journal"]:
         return
 
-    # Create a place to store which row's ingredients to show
-    if "show_ingredients_for" not in st.session_state:
-        st.session_state["show_ingredients_for"] = None
-
-    # ----- TABLE HEADER -----
-    # We'll use columns to create a row for the headers
+    # ----- TABLEAU DES ENTRÉES DU JOURNAL -----
+    # On crée un entête de tableau avec des colonnes
     header_col1, header_col2, header_col3, header_col4 = st.columns([2, 2, 2, 1])
     header_col1.write("**Date**")
     header_col2.write("**Meal Name**")
     header_col3.write("**Photo**")
     header_col4.write("")
 
-    # Loop through each journal entry and display one row per entry
+    # Variable pour savoir quel repas développer pour voir les ingrédients
+    if "show_ingredients_for" not in st.session_state:
+        st.session_state["show_ingredients_for"] = None
+
+    # Parcourir chaque entrée du journal et afficher une ligne par repas
     for i, entry in enumerate(st.session_state["journal"]):
         col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
-
+        
         # 1) Date
-        dt_str = entry["datetime"]  # ISO string (e.g. 2025-02-15T19:49:05.326333)
+        dt_str = entry["datetime"]  # chaîne ISO, par exemple "2025-02-15T19:49:05.326333"
         try:
             dt_obj = datetime.fromisoformat(dt_str)
             date_formatted = dt_obj.strftime("%d/%m/%Y %H:%M:%S")
         except ValueError:
-            # Fallback if parsing fails
             date_formatted = dt_str
         col1.write(date_formatted)
 
-        # 2) Meal Name
+        # 2) Nom du repas
         dish_name = entry.get("dish_name", "Unknown Meal")
         col2.write(dish_name)
 
         # 3) Photo (thumbnail)
         photo = entry.get("photo")
         if photo:
-            # If you stored a PIL Image object:
             if isinstance(photo, Image.Image):
                 col3.image(photo, width=80)
             else:
-                # Otherwise, if you stored bytes, try converting to a PIL image
                 try:
                     img = Image.open(photo)
                     col3.image(img, width=80)
@@ -304,22 +343,20 @@ def show_history_page():
         else:
             col3.write("No image")
 
-        # 4) Voir plus button
+        # 4) Bouton "Voir plus"
         if col4.button("Voir plus", key=f"voir_plus_{i}"):
-            # Record which entry we want to see ingredients for, then re-run
             if st.session_state["show_ingredients_for"] == i:
-                # If clicked again, hide it
-                st.session_state["show_ingredients_for"] = None
+                st.session_state["show_ingredients_for"] = None  # Pour masquer si déjà affiché
             else:
                 st.session_state["show_ingredients_for"] = i
             st.rerun()
 
-        # If this row's "Voir plus" is active, display ingredients below
+        # Affichage des ingrédients si "Voir plus" est activé pour cette entrée
         if st.session_state["show_ingredients_for"] == i:
             st.write("**Ingredients:**")
             ingredients = entry.get("extracted_ingredients", [])
             st.table(ingredients)
-            st.write("---")  # a horizontal rule to separate entries
+            st.write("---")
 
 
 #region Authentication Page
