@@ -5,10 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5c9b5b18-eb7c-41cb-acca-d853f5f39f08" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/travai/vector_db/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/travai/vector_db/db.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/travai/vector_db/vector_db.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/travai/vector_db/vector_db.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/travai/vector_db/vector_db.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
