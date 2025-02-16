@@ -9,7 +9,7 @@ model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 client = chromadb.PersistentClient(path="./chroma_db")
 collection = client.get_or_create_collection("food_embeddings")
 
-with open("tokenized_corpus.json", "r", encoding="utf-8") as f:
+with open("/Users/datacraft-marc/Documents/Code/hackathon doctolib/src/travai/vector_db/tokenized_corpus.json", "r", encoding="utf-8") as f:
     tokenized_corpus = json.load(f)
 
 bm25 = BM25Okapi(tokenized_corpus)
@@ -37,10 +37,20 @@ def hybrid_search(query, top_k=5):
 
     return food_info
 
-query = "bacon"
 
-results = hybrid_search(query=query, top_k=5)
+def retrieve_ingredients_for_given_example(json_file_path= 'meal_analysis.json'):
 
-print(f"\n🍝 Top Matching Foods for {query} : ")
-for i, name in enumerate(results, 1):
-    print(f"{i}. {name}")
+    with open(json_file_path, 'r') as file:
+        # Load the JSON data
+        meal_analysis = json.load(file)
+
+    ingredient_names = [ingredient['ingredient_name'] for ingredient in meal_analysis['ingredients']]
+    print(f"HERE ARE THE QUERIED INGEREDIENTS : {ingredient_names}")
+    ingredients_matching_dict = {}
+
+    for ingredient in ingredient_names:
+        results = hybrid_search(ingredient, top_k=5)
+        if results:
+            ingredients_matching_dict[ingredient] = results
+
+    return(ingredients_matching_dict)

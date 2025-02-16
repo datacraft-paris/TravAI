@@ -11,5 +11,10 @@ wheels/
 .env
 uv.lock
 *.ipynb
+!hackathon_ciqual_dataset_preparation.ipynb
 
 src/travai/vector_db/data
+
+src/travai/app/meal_analysis.json
+src/travai/vector_db/meal_analysis.json
+
