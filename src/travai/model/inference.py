@@ -100,7 +100,7 @@ def get_structured_answer(
 
 def main() -> None:
     client = get_client()
-    b64_image = b64_from_path("/Users/raphael/TravAI/1.png")
+    b64_image = b64_from_path("./your_image.png")
     response = get_structured_answer(
         client=client,
         model_name="pixtral-12b-2409",

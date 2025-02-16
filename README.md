@@ -28,6 +28,23 @@ Then, run: `uv sync`
 
 Finally, activate your environment using: `source .venv/bin/activate`
 
+## Create your .env file
+
+you can do `touch .env` and then `vim .env` to edit your secrets and add your Scaleway API KEY with the following format:
+`SCW_SECRET_KEY="xxxx"`
+
+## Initialize alembic
+
+Run `alembic upgrade head` to setup the database schema
+
+## Populate the database
+
+Run `python src/travai/backend/db_populate.py`
+
+## Setup the vector db
+
+Run `python src/travai/backend/vector_db/vector_database.py`
+
 ## Run the app
 
 To run the app, use: `streamlit run src/travai/app/run.py`
@@ -37,11 +54,12 @@ To run the app, use: `streamlit run src/travai/app/run.py`
 Once in the app, feel free to join an account locally using those test credentials:
 
 - Username: `emma@example.com`
-- Password: `patient123`
+- Password: `hashed_password3`
 
 ## Submitting a food picture
 
 Click on the file uploader once logged in, pick your favorite plate and let the magic begin!
+Once the picture is uploaded, tap the `Analyze Image` button to run computations.
 
 ## Adjusting model predictions
 
