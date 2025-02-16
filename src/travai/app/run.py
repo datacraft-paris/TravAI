@@ -10,9 +10,10 @@ from pydantic import BaseModel
 from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 from travai.backend.vector_db.query import query_food
-from travai.backend.services.meal_service import create_meal
+from travai.backend.services.meal_service import create_meal, get_meals_by_patient
 from travai.backend.services.patient_service import get_patient_by_email, authenticate_user
 from travai.backend.services.detected_ingredient_service import create_detected_ingredient
+from travai.backend.utils import get_sum_calories_per_meal_detected, get_sum_calories_per_meal_modified
 from travai.backend.services.modified_ingredient_service import create_modified_ingredient, update_modified_ingredient, delete_modified_ingredient
 import torch
 
@@ -271,19 +272,21 @@ def show_history_page():
     st.write("View the history of analyzed meals in a tabular format with a 'Voir plus' button to reveal ingredients.")
 
     # Afficher les métriques et l'histogramme uniquement s'il y a des entrées dans le journal
+    patient = get_patient_by_email(st.session_state['email'])
+    patient_meals = get_meals_by_patient(patient.patient_id)
     if "journal" in st.session_state and st.session_state["journal"]:
         # --- Calcul de la quantité totale par repas ---
-        total_grams_list = []
-        for entry in st.session_state["journal"]:
-            ingredients = entry.get("extracted_ingredients", [])
-            total = sum(item.get("quantity_grams", 0) for item in ingredients)
-            total_grams_list.append(total)
+        total_kcal_list = []
+        for meal in patient_meals:
+            total = get_sum_calories_per_meal_detected(meal.meal_id)
+            total_kcal_list.append(total)
 
         # Créer un DataFrame avec un identifiant pour chaque repas
         import pandas as pd
+        print(total_kcal_list)
         df_meals = pd.DataFrame({
-            "Repas": [f"Repas {i+1}" for i in range(len(total_grams_list))],
-            "Quantité (g)": total_grams_list
+            "Repas": [f"Repas {i+1}" for i in range(len(total_kcal_list))],
+            "Calories totales (kcal)": total_kcal_list
         })
 
         # Créer le graphique à barres avec Altair : 
@@ -292,9 +295,9 @@ def show_history_page():
         import altair as alt
         bar_chart = alt.Chart(df_meals).mark_bar(opacity=0.7).encode(
             x=alt.X("Repas:N", title="Repas"),
-            y=alt.Y("Quantité (g):Q", title="Quantité Totale (g)")
+            y=alt.Y("Calories totales (kcal):Q", title="Calories totales (kcal)")
         ).properties(
-            title="Quantité mangée par repas",
+            title="Calories mangées par repas",
             width=600,
             height=300
 )
