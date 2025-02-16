@@ -2,7 +2,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-food_dataset = pd.read_csv('/Users/datacraft-marc/Documents/Code/CSV_hackathon/Table-Ciqual-2020_processed_final.csv')
+food_dataset = pd.read_csv('/Users/raphael/TravAI/Table-Ciqual-2020_processed_final.csv')
 
 print("Data loaded 🍔")
 

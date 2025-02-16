@@ -173,9 +173,9 @@ def show_meal_analysis_page():
                 ingredients_data = st.session_state['parsed_result'][st.session_state['dish2id'][choice]].get('ingredients')
                 print([ingredient['ingredient_name'] for ingredient in ingredients_data])
                 if 'chroma_db_client' not in st.session_state:
-                    st.session_state['chroma_db_client'] = chromadb.PersistentClient(path="/Users/raphael/TravAI/src/travai/backend/vector_db")
-                closest_food_ids, closest_food_names = query_food(foods=deepcopy([ingredient['ingredient_name'] for ingredient in ingredients_data]))
-                for food_id, food_name, quantity in zip(closest_food_ids, closest_food_names, [ingredient.quantity_grams for ingredient in ingredients_data]):
+                    st.session_state['chroma_db_client'] = chromadb.PersistentClient(path="/Users/raphael/TravAI/chroma_db/")
+                closest_food_ids, closest_food_names, closest_calories = query_food(client=st.session_state['chroma_db_client'], foods=deepcopy([ingredient['ingredient_name'] for ingredient in ingredients_data]))
+                for food_id, food_name, calories, quantity in zip(closest_food_ids, closest_food_names, closest_calories, [ingredient['quantity_grams'] for ingredient in ingredients_data]):
                     create_detected_ingredient(
                         meal_id=meal.meal_id,
                         ingredient_id=food_id,
