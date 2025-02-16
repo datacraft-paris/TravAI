@@ -2,10 +2,8 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
+from travai.backend.models import Base
 from alembic import context
-from travai.backend.database import Base
-import travai.backend.models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

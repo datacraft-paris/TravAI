@@ -140,7 +140,6 @@ def show_meal_analysis_page():
                     dish2id = {dish['dish_name']: i for i, dish in enumerate(parsed_result)}
                     st.session_state['dish2id'] = dish2id
                     st.success("Analysis complete!")
-
                     # Initialize session state for dish name and ingredients
                 except Exception as e:
                     st.error("An error occurred during image analysis.")
@@ -152,15 +151,15 @@ def show_meal_analysis_page():
                 options=st.session_state['dish2id'].keys(),
                 index=None
             ) if len(st.session_state['dish2id']) > 1 else st.session_state['parsed_result'][0]['dish_name']
-            patient = get_patient_by_email(email=st.session_state["email"])
-            meal = create_meal(
-                patient_id=patient.patient_id,
-                date_start=datetime.now(),
-                image_path=save_uploaded_image(uploaded_file=uploaded_file),
-                name=choice,
-            )
             # Here vectorization + detected food + copy modified food = detected food at this time
             if choice is not None:
+                patient = get_patient_by_email(email=st.session_state["email"])
+                meal = create_meal(
+                    patient_id=patient.patient_id,
+                    date_start=datetime.now(),
+                    image_path=save_uploaded_image(uploaded_file=uploaded_file),
+                    name=choice,
+                )
                 st.subheader("Edit Dish and Ingredients Before Saving")
 
                 # Edit the dish name
@@ -174,15 +173,24 @@ def show_meal_analysis_page():
                 print([ingredient['ingredient_name'] for ingredient in ingredients_data])
                 if 'chroma_db_client' not in st.session_state:
                     st.session_state['chroma_db_client'] = chromadb.PersistentClient(path="/Users/raphael/TravAI/chroma_db/")
-                closest_food_ids, closest_food_names, closest_calories = query_food(client=st.session_state['chroma_db_client'], foods=deepcopy([ingredient['ingredient_name'] for ingredient in ingredients_data]))
-                for food_id, food_name, calories, quantity in zip(closest_food_ids, closest_food_names, closest_calories, [ingredient['quantity_grams'] for ingredient in ingredients_data]):
-                    create_detected_ingredient(
+                closest_food_names, closest_calories = query_food(client=st.session_state['chroma_db_client'], foods=deepcopy([ingredient['ingredient_name'] for ingredient in ingredients_data]))
+                modified_foods = []
+                modified_calories = []
+                for food_name, calories, quantity in zip(closest_food_names, closest_calories, [ingredient['quantity_grams'] for ingredient in ingredients_data]):
+                    try:
+                        final_cal = float(calories.replace(',', '.'))
+                    except Exception as e:
+                        print(str(e))
+                        final_cal = 0
+                    new_detected_ingredient = create_detected_ingredient(
                         meal_id=meal.meal_id,
-                        ingredient_id=food_id,
                         ingredient_name=food_name,
-                        quantity_grams=quantity
+                        quantity_grams=quantity,
+                        calculated_calories=float(final_cal)*quantity/100
                     )
-                    create_modified_ingredient(detected_ingredient_id=food_id, quantity_grams=quantity)
+                    new_modified = create_modified_ingredient(meal_id=meal.meal_id, detected_ingredient_id=new_detected_ingredient.detected_ingredient_id, ingredient_name=food_name, quantity_grams=quantity, calculated_calories=float(final_cal)*quantity/100)
+                    modified_foods.append(new_modified.modified_ingredient_id)
+                    modified_calories.append(final_cal)
                 # Use a while loop to safely remove items without messing up indexing
                 i = 0
                 while i < len(ingredients_data):
@@ -202,12 +210,12 @@ def show_meal_analysis_page():
                             key=f"qty_{i}"
                         )
                         if new_qty != float(row["quantity_grams"]):
-                            update_modified_ingredient(modified_ingredient_id=closest_food_ids[i], quantity_grams=new_qty)
+                            update_modified_ingredient(modified_ingredient_id=modified_foods[i], ingredient_name=new_name, quantity_grams=new_qty, calculated_calories=float(modified_calories[i])*new_qty/100)
                     with c3:
                         # Minus button to remove the row
                         remove_btn_label = f"Remove {i}"
                         if st.button("–", key=remove_btn_label):
-                            delete_modified_ingredient(closest_food_ids[i])
+                            delete_modified_ingredient(modified_foods[i])
                             ingredients_data.pop(i)
                             # Force a re-run so the row disappears immediately
                             st.rerun()

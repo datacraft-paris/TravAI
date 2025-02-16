@@ -17,6 +17,5 @@ def query_food(client: chromadb.PersistentClient, foods: list[str]):
         n_results=5# how many results to return
     )
     names = [meta[0]["alim_nom_en"] for meta in results["metadatas"]]
-    ids = [idx[0] for idx in results['ids']]
     calories = [cal[0]['Energie_kcal_100g'] for cal in results['metadatas']]
-    return ids, names, calories
+    return names, calories
