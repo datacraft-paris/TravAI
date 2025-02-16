@@ -1,14 +1,20 @@
 import streamlit as st
 from PIL import Image
 import json
+import os
 from dotenv import load_dotenv
 import base64
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
-st.set_page_config(layout="wide")
+from travai.backend.services.detected_ingredient_service import create_detected_ingredient
+from travai.backend.services.meal_service import create_meal
+from travai.backend.services.patient_service import get_patient_by_email
+from travai.backend.services.ingredient_service import get_ingredient_by_name
 
+
+st.set_page_config(layout="wide")
 
 # region Pydantic Models
 
@@ -44,6 +50,26 @@ class DishSuggestion(BaseModel):
     """
     possible_dishes: list[Dish]
 
+def save_uploaded_image(uploaded_file):
+    """
+    Saves an uploaded image to the assets folder and returns the file path.
+    :param uploaded_file: The uploaded file from Streamlit
+    :return: The file path of the saved image
+    """
+    ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+    os.makedirs(ASSET_DIR, exist_ok=True)
+    if uploaded_file is not None:
+        # Generate a unique filename
+        file_extension = uploaded_file.name.split('.')[-1]
+        filename = f"img_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_extension}"
+        file_path = os.path.join(ASSET_DIR, filename)
+
+        # Save the file
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        return file_path  # Return the saved file path
+    return None
 
 
 #region Simulated Credential Storage
@@ -100,6 +126,20 @@ def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> Non
         "extracted_ingredients": extracted_ingredients,
         "dish_name": dish_name  # <-- We store it in the entry
     }
+    patient = get_patient_by_email(email=st.session_state["email"])
+    meal = create_meal(
+        patient_id=patient.patient_id,
+        date_start=new_entry['datetime'],
+        image_path=save_uploaded_image(new_entry['photo']),
+        name=dish_name,
+    )
+    for ingredient in extracted_ingredients:
+        create_detected_ingredient(
+            meal_id=meal.meal_id,
+            ingredient_id=get_ingredient_by_name(name=ingredient.ingredient_name),
+            ingredient_name=ingredient.ingredient_name,
+            quantity_grams=ingredient.quantity_grams
+        )
 
     if "journal" not in st.session_state:
         st.session_state["journal"] = []
