@@ -1,0 +1,76 @@
+{ "meal" : [ 
+    {
+        "datetime": "2025-02-09T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Tomato", "quantity_grams": 100, "calories": 18},
+            {"ingredient_name": "Mozzarella", "quantity_grams": 80, "calories": 200},
+            {"ingredient_name": "Basil", "quantity_grams": 10, "calories": 2},
+            {"ingredient_name": "Olive Oil", "quantity_grams": 10, "calories": 90}
+        ],
+        "dish_name": "Caprese Salad"
+    }, 
+    {
+        "datetime": "2025-02-10T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Chicken Breast", "quantity_grams": 200, "calories": 300},
+            {"ingredient_name": "Rice", "quantity_grams": 150, "calories": 200},
+            {"ingredient_name": "Broccoli", "quantity_grams": 50, "calories": 15}
+        ],
+        "dish_name": "Grilled Chicken with Rice"
+    },
+    {
+        "datetime": "2025-02-11T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Pasta", "quantity_grams": 150, "calories": 240},
+            {"ingredient_name": "Ground Beef", "quantity_grams": 100, "calories": 250},
+            {"ingredient_name": "Tomato Sauce", "quantity_grams": 100, "calories": 70},
+            {"ingredient_name": "Parmesan", "quantity_grams": 20, "calories": 80}
+        ],
+        "dish_name": "Pasta Bolognese"
+    },
+    {
+        "datetime": "2025-02-12T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Carrots", "quantity_grams": 80, "calories": 30},
+            {"ingredient_name": "Bell Peppers", "quantity_grams": 80, "calories": 25},
+            {"ingredient_name": "Onions", "quantity_grams": 50, "calories": 20},
+            {"ingredient_name": "Soy Sauce", "quantity_grams": 10, "calories": 6}
+        ],
+        "dish_name": "Vegetable Stir-Fry"
+    },
+    {
+        "datetime": "2025-02-13T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Salmon", "quantity_grams": 150, "calories": 300},
+            {"ingredient_name": "Quinoa", "quantity_grams": 100, "calories": 120},
+            {"ingredient_name": "Spinach", "quantity_grams": 30, "calories": 7}
+        ],
+        "dish_name": "Salmon and Quinoa"
+    },
+    {
+        "datetime": "2025-02-14T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Ground Beef", "quantity_grams": 100, "calories": 250},
+            {"ingredient_name": "Tortilla", "quantity_grams": 50, "calories": 150},
+            {"ingredient_name": "Cheese", "quantity_grams": 30, "calories": 110},
+            {"ingredient_name": "Lettuce", "quantity_grams": 20, "calories": 5}
+        ],
+        "dish_name": "Beef Tacos"
+    },
+    {
+        "datetime": "2025-02-15T12:30:00",
+        "photo": "None",
+        "extracted_ingredients": [
+            {"ingredient_name": "Greek Yogurt", "quantity_grams": 150, "calories": 100},
+            {"ingredient_name": "Honey", "quantity_grams": 20, "calories": 60},
+            {"ingredient_name": "Mixed Berries", "quantity_grams": 50, "calories": 25}
+        ],
+        "dish_name": "Greek Yogurt with Honey and Berries"
+    }]
+}
