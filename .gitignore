@@ -10,7 +10,6 @@ wheels/
 .venv
 .env
 uv.lock
-*.ipynb
 *.jpg
 *.sqlite3
 *.bin
