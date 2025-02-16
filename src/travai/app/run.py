@@ -8,10 +8,8 @@ from pydantic import BaseModel
 from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
 
-from travai.backend.services.detected_ingredient_service import create_detected_ingredient
 from travai.backend.services.meal_service import create_meal
 from travai.backend.services.patient_service import get_patient_by_email
-from travai.backend.services.ingredient_service import get_ingredient_by_name
 
 
 st.set_page_config(layout="wide")
@@ -127,21 +125,6 @@ def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> Non
         "extracted_ingredients": extracted_ingredients,
         "dish_name": dish_name  # <-- We store it in the entry
     }
-    patient = get_patient_by_email(email=st.session_state["email"])
-    meal = create_meal(
-        patient_id=patient.patient_id,
-        date_start=new_entry['datetime'],
-        image_path=save_uploaded_image(new_entry['photo']),
-        name=dish_name,
-    )
-    for ingredient in extracted_ingredients:
-        create_detected_ingredient(
-            meal_id=meal.meal_id,
-            ingredient_id=get_ingredient_by_name(name=ingredient.ingredient_name),
-            ingredient_name=ingredient.ingredient_name,
-            quantity_grams=ingredient.quantity_grams
-        )
-
     if "journal" not in st.session_state:
         st.session_state["journal"] = []
 
@@ -205,6 +188,14 @@ def show_meal_analysis_page():
                 options=st.session_state['dish2id'].keys(),
                 index=None
             ) if len(st.session_state['dish2id']) > 1 else st.session_state['parsed_result'][0]['dish_name']
+            patient = get_patient_by_email(email=st.session_state["email"])
+            create_meal(
+                patient_id=patient.patient_id,
+                date_start=datetime.now(),
+                image_path=save_uploaded_image(uploaded_file=uploaded_file),
+                name=choice,
+            )
+            # Here vectorization + detected food + copy modified food = detected food at this time
             if choice is not None:
                 st.subheader("Edit Dish and Ingredients Before Saving")
 
@@ -274,6 +265,7 @@ def show_meal_analysis_page():
 
                 # Button to finalize and add to the journal
                 if st.button("Save to Journal"):
+                    # Modify modified food
                     # Save final data to journal
                     update_journal(dish_data, image, datetime.now())
                     st.info("Your meal analysis has been added to the journal.")
