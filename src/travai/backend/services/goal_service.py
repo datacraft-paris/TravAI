@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Goal, Patient
+from travai.backend.database import SessionLocal
+from travai.backend.models import Goal, Patient
 from datetime import datetime
 
 def create_goal(patient_id: int, date_start: datetime, date_end: datetime, calories_in_grams_per_day: float):

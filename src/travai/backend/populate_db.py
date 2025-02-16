@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from database import SessionLocal, engine, Base
-from models import Patient, Doctor, Meal, Ingredient, DetectedIngredient, ModifiedIngredient, Goal
+from travai.backend.database import SessionLocal, engine, Base
+from travai.backend.models import Patient, Doctor, Meal, Ingredient, DetectedIngredient, ModifiedIngredient, Goal
 
 
 Base.metadata.create_all(bind=engine)

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import DetectedIngredient, Meal, Ingredient, ModifiedIngredient
+from travai.backend.database import SessionLocal
+from travai.backend.models import DetectedIngredient, Meal, Ingredient, ModifiedIngredient
 
 def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name: str, quantity_grams: float):
     """
