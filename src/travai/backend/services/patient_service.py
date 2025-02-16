@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Patient, Doctor, Goal
+from travai.backend.database import SessionLocal
+from travai.backend.models import Patient, Doctor, Goal
 
 def create_patient(first_name: str, last_name: str, email: str, password: str, doctor_id: int = None):
     """
@@ -141,5 +141,39 @@ def delete_patient(email: str):
         session.rollback()
         print(f"Error deleting patient: {e}")
         return False
+    finally:
+        session.close()
+
+def authenticate_user(email: str, password: str):
+    """
+    Checks if the given email and password match either a doctor or a patient.
+
+    :param email: The email of the user
+    :param password: The password entered by the user (stored as plain text for demo)
+    :return: "doctor" if the user is a doctor, "patient" if the user is a patient, None if invalid credentials
+    """
+    session = SessionLocal()
+
+    try:
+        # Check if the user is a doctor
+        doctor = session.query(Doctor).filter(Doctor.email == email, Doctor.password == password).first()
+        if doctor:
+            print("User authenticated as a doctor.")
+            return doctor, "doctor"
+
+        # Check if the user is a patient
+        patient = session.query(Patient).filter(Patient.email == email, Patient.password == password).first()
+        if patient:
+            print("User authenticated as a patient.")
+            return patient, "patient"
+
+        # If neither doctor nor patient matched
+        print("Invalid credentials.")
+        return None
+
+    except Exception as e:
+        print(f"Error during authentication: {e}")
+        return None
+
     finally:
         session.close()

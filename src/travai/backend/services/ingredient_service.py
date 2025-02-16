@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Ingredient
+from travai.backend.database import SessionLocal
+from travai.backend.models import Ingredient
 
 def create_ingredient(name: str, calories_per_100g: float):
     """
