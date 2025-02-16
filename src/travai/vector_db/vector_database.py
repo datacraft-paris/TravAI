@@ -2,8 +2,6 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 import chromadb
 
-
-
 food_dataset = pd.read_csv('/Users/datacraft-marc/Documents/Code/CSV_hackathon/Table-Ciqual-2020_processed_final.csv')
 
 print("Data loaded 🍔")
@@ -12,12 +10,20 @@ print("Data loaded 🍔")
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 embeddings = model.encode(food_dataset['alim_nom_en'].tolist(), convert_to_tensor=True)
 
+
+
 # Initialize Chroma client
 client = chromadb.PersistentClient(path="./chroma_db")
+
+# Delete the collection if it already exists
+client.delete_collection('food_embeddings')
+print(f"Deleted existing collection: {'food_embeddings'}")
+
+
 collection = client.create_collection('food_embeddings')
 
 # Create IDs
-ids = food_dataset['alim_code'].tolist()
+ids = [str(i) for i in range(len(food_dataset))]
 
 print("Adding data to ChromaDB...")
 
@@ -54,8 +60,4 @@ collection.add(embeddings=embeddings.tolist(),
                )
 print("Data added to ChromaDB 🚀")
 
-results = collection.query(
-    query_texts=["mushroom"], # Chroma will embed this for you
-    n_results=5# how many results to return
-)
-print(results)
+
