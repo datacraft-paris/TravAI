@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from travai.backend.database import SessionLocal
+from travai.backend.database import SessionLocal, engine, Base
 from travai.backend.models import Patient, Doctor, Meal, Ingredient, DetectedIngredient, ModifiedIngredient, Goal
 
 

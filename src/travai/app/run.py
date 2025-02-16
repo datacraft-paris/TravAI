@@ -1,15 +1,24 @@
 import streamlit as st
 from PIL import Image
 import json
+import os
+import chromadb
+from copy import deepcopy
 from dotenv import load_dotenv
 import base64
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from travai.model.inference import get_structured_answer, get_client
 from datetime import datetime
+from travai.backend.vector_db.query import query_food
+from travai.backend.services.meal_service import create_meal
+from travai.backend.services.patient_service import get_patient_by_email, authenticate_user
+from travai.backend.services.detected_ingredient_service import create_detected_ingredient
+from travai.backend.services.modified_ingredient_service import create_modified_ingredient, update_modified_ingredient, delete_modified_ingredient
+import torch
+
 
 st.set_page_config(layout="wide")
-
-
+torch.classes.__path__ = []
 # region Pydantic Models
 
 class Ingredient(BaseModel):
@@ -44,46 +53,26 @@ class DishSuggestion(BaseModel):
     """
     possible_dishes: list[Dish]
 
-
-
-#region Simulated Credential Storage
-
-MED_CREDENTIALS = {
-    "doctor@hospital.com": "med123",
-}
-PATIENT_CREDENTIALS = {
-    "john.doe@example.com": "patient123",
-}
-
-
-
-#region Check Credentials
-
-def check_credentials(email: str, password: str) -> str | None:
+def save_uploaded_image(uploaded_file):
     """
-    Returns "med" if the email/password is in the MED_CREDENTIALS,
-    "patient" if in PATIENT_CREDENTIALS, or None if invalid.
+    Saves an uploaded image to the assets folder and returns the file path.
+    :param uploaded_file: The uploaded file from Streamlit
+    :return: The file path of the saved image
     """
-    # Check med
-    if email in MED_CREDENTIALS and MED_CREDENTIALS[email] == password:
-        return "med"
-    # Check patient
-    if email in PATIENT_CREDENTIALS and PATIENT_CREDENTIALS[email] == password:
-        return "patient"
+    ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
+    os.makedirs(ASSET_DIR, exist_ok=True)
+    if uploaded_file is not None:
+        # Generate a unique filename
+        file_extension = uploaded_file.name.split('.')[-1]
+        filename = f"img_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{file_extension}"
+        file_path = os.path.join(ASSET_DIR, filename)
+
+        # Save the file
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+
+        return file_path  # Return the saved file path
     return None
-
-
-
-
-
-#region Simulated Credential Storage
-
-MED_CREDENTIALS = {
-    "doctor@hospital.com": "med123",
-}
-PATIENT_CREDENTIALS = {
-    "john.doe@example.com": "patient123",
-}
 
 #region Journal Update Function
 
@@ -100,7 +89,6 @@ def update_journal(vlm_result: dict, uploaded_image, timestamp: datetime) -> Non
         "extracted_ingredients": extracted_ingredients,
         "dish_name": dish_name  # <-- We store it in the entry
     }
-
     if "journal" not in st.session_state:
         st.session_state["journal"] = []
 
@@ -138,7 +126,7 @@ def show_meal_analysis_page():
                 try:
                     raw_result = get_structured_answer(
                         client=st.session_state["client"],
-                        model_name="gpt-4o",
+                        model_name="pixtral-12b-2409",
                         prompt=(
                             "Describe the list of ingredients required to make this dish "
                             "using the classes Ingredient and Dish"
@@ -164,6 +152,14 @@ def show_meal_analysis_page():
                 options=st.session_state['dish2id'].keys(),
                 index=None
             ) if len(st.session_state['dish2id']) > 1 else st.session_state['parsed_result'][0]['dish_name']
+            patient = get_patient_by_email(email=st.session_state["email"])
+            meal = create_meal(
+                patient_id=patient.patient_id,
+                date_start=datetime.now(),
+                image_path=save_uploaded_image(uploaded_file=uploaded_file),
+                name=choice,
+            )
+            # Here vectorization + detected food + copy modified food = detected food at this time
             if choice is not None:
                 st.subheader("Edit Dish and Ingredients Before Saving")
 
@@ -175,7 +171,18 @@ def show_meal_analysis_page():
 
                 # Editable table for ingredients
                 ingredients_data = st.session_state['parsed_result'][st.session_state['dish2id'][choice]].get('ingredients')
-
+                print([ingredient['ingredient_name'] for ingredient in ingredients_data])
+                if 'chroma_db_client' not in st.session_state:
+                    st.session_state['chroma_db_client'] = chromadb.PersistentClient(path="/Users/raphael/TravAI/chroma_db/")
+                closest_food_ids, closest_food_names, closest_calories = query_food(client=st.session_state['chroma_db_client'], foods=deepcopy([ingredient['ingredient_name'] for ingredient in ingredients_data]))
+                for food_id, food_name, calories, quantity in zip(closest_food_ids, closest_food_names, closest_calories, [ingredient['quantity_grams'] for ingredient in ingredients_data]):
+                    create_detected_ingredient(
+                        meal_id=meal.meal_id,
+                        ingredient_id=food_id,
+                        ingredient_name=food_name,
+                        quantity_grams=quantity
+                    )
+                    create_modified_ingredient(detected_ingredient_id=food_id, quantity_grams=quantity)
                 # Use a while loop to safely remove items without messing up indexing
                 i = 0
                 while i < len(ingredients_data):
@@ -194,10 +201,13 @@ def show_meal_analysis_page():
                             step=1.0,
                             key=f"qty_{i}"
                         )
+                        if new_qty != float(row["quantity_grams"]):
+                            update_modified_ingredient(modified_ingredient_id=closest_food_ids[i], quantity_grams=new_qty)
                     with c3:
                         # Minus button to remove the row
                         remove_btn_label = f"Remove {i}"
                         if st.button("–", key=remove_btn_label):
+                            delete_modified_ingredient(closest_food_ids[i])
                             ingredients_data.pop(i)
                             # Force a re-run so the row disappears immediately
                             st.rerun()
@@ -233,6 +243,7 @@ def show_meal_analysis_page():
 
                 # Button to finalize and add to the journal
                 if st.button("Save to Journal"):
+                    # Modify modified food
                     # Save final data to journal
                     update_journal(dish_data, image, datetime.now())
                     st.info("Your meal analysis has been added to the journal.")
@@ -372,12 +383,13 @@ def show_authentication_page():
     password = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        role = check_credentials(email, password)
+        user, role = authenticate_user(email, password)
         if role is None:
             st.error("Invalid email or password. Please try again.")
         else:
             st.session_state["logged_in"] = True
             st.session_state["role"] = role
+            st.session_state['email'] = email
             st.rerun()
 
 
@@ -409,7 +421,7 @@ def main():
             with tab2:
                 show_history_page()
 
-        elif st.session_state["role"] == "med":
+        elif st.session_state["role"] == "doctor":
             # Med sees only the History page
             show_history_page()
         else:

@@ -21,8 +21,9 @@ def get_client():
         The OpenAI client
     """
     return OpenAI(
+        base_url="https://api.scaleway.ai/d4e5eb30-b84e-4d48-af57-57b11c4e8755/v1",
         api_key=os.getenv(
-            "OPENAI_API_KEY"
+            "SCW_SECRET_KEY",
         ),  # Replace SCW_SECRET_KEY with your IAM API key
     )
 
