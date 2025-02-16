@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from travai.backend.database import SessionLocal
 from travai.backend.models import DetectedIngredient, Meal, Ingredient, ModifiedIngredient
 
-def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name: str, quantity_grams: float, calculated_calories:float):
+def create_detected_ingredient(meal_id: int, ingredient_name: str, quantity_grams: float, calculated_calories:float):
     """
     Creates a new detected ingredient and assigns it to a meal.
 
@@ -21,16 +21,10 @@ def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name
             print("Meal ID does not exist.")
             return None
 
-        # Verify that the ingredient exists
-        ingredient = session.query(Ingredient).filter(Ingredient.ingredient_id == ingredient_id).first()
-        if not ingredient:
-            print("Ingredient ID does not exist.")
-            return None
 
         # Create a new DetectedIngredient object
         new_detected_ingredient = DetectedIngredient(
             meal_id=meal_id,
-            ingredient_id=ingredient_id,
             ingredient_name=ingredient_name,
             quantity_grams=quantity_grams,
             calculated_calories=calculated_calories,

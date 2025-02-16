@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Meal, Patient, DetectedIngredient
+from travai.backend.database import SessionLocal
+from travai.backend.models import Meal, Patient, DetectedIngredient, ModifiedIngredient
 from datetime import datetime
 
 def create_meal(patient_id: int, date_start: datetime, image_path: str, name: str):
@@ -142,6 +142,8 @@ def delete_meal(meal_id: int):
 
         # Delete all detected ingredients linked to this meal
         session.query(DetectedIngredient).filter(DetectedIngredient.meal_id == meal_id).delete()
+        # Delete all modified ingredients linked to this meal
+        session.query(ModifiedIngredient).filter(ModifiedIngredient.meal_id == meal_id).delete()
 
         # Now delete the meal
         session.delete(meal)

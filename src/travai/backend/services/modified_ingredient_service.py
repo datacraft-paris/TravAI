@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from travai.backend.database import SessionLocal
 from travai.backend.models import ModifiedIngredient, DetectedIngredient
 
-def create_modified_ingredient(detected_ingredient_id: int, meal_id: int, quantity_grams: float, calculated_calories: float):
+def create_modified_ingredient(detected_ingredient_id: int, meal_id: int, ingredient_name:str, quantity_grams: float, calculated_calories: float):
     """
     Creates a new modified ingredient and associates it with a detected ingredient.
 
@@ -23,6 +23,7 @@ def create_modified_ingredient(detected_ingredient_id: int, meal_id: int, quanti
         new_modified_ingredient = ModifiedIngredient(
             detected_ingredient_id=detected_ingredient_id,
             meal_id=meal_id,
+            ingredient_name=ingredient_name,
             quantity_grams=quantity_grams,
             calculated_calories=calculated_calories
         )
@@ -101,7 +102,7 @@ def get_modified_ingredients_by_meal_id(meal_id: int):
         session.close()
 
 
-def update_modified_ingredient(modified_ingredient_id: int, quantity_grams: float = None, calculated_calories: float = None):
+def update_modified_ingredient(modified_ingredient_id: int, ingredient_name:str = None, quantity_grams: float = None, calculated_calories: float = None):
     """
     Updates details of a modified ingredient in the database.
 
@@ -121,6 +122,8 @@ def update_modified_ingredient(modified_ingredient_id: int, quantity_grams: floa
             modified_ingredient.quantity_grams = quantity_grams
         if calculated_calories is not None:
             modified_ingredient.calculated_calories = calculated_calories
+        if ingredient_name:
+            modified_ingredient.ingredient_name = ingredient_name
 
         session.commit()
         session.refresh(modified_ingredient)
