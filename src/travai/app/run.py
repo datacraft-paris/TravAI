@@ -91,6 +91,7 @@ def check_credentials(email: str, password: str) -> str | None:
     "patient" if in PATIENT_CREDENTIALS, or None if invalid.
     """
     # Check med
+    st.session_state['email'] = email
     if email in MED_CREDENTIALS and MED_CREDENTIALS[email] == password:
         return "med"
     # Check patient
