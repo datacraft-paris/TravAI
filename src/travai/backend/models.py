@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from database import Base
+from travai.backend.database import Base
 
 
 
@@ -48,13 +48,17 @@ class DetectedIngredient(Base):
     ingredient_id = Column(Integer, ForeignKey("ingredients.ingredient_id"), nullable=False)
     ingredient_name = Column(String, nullable=False)
     quantity_grams = Column(Float, nullable=False)
+    calculated_calories = Column(Float, nullable=True, default=0)
 
 class ModifiedIngredient(Base):
     __tablename__ = "modified_ingredients"
 
     modified_ingredient_id = Column(Integer, primary_key=True, index=True)
-    detected_ingredient_id = Column(Integer, ForeignKey("detected_ingredients.detected_ingredient_id"), nullable=False)
+    meal_id = Column(Integer, ForeignKey("meals.meal_id"), nullable=False)
+    detected_ingredient_id = Column(Integer, ForeignKey("detected_ingredients.detected_ingredient_id"), nullable=True)
     quantity_grams = Column(Float, nullable=False)
+    calculated_calories = Column(Float, nullable=True, default=0)
+
 
 class Goal(Base):
     __tablename__ = "goals"

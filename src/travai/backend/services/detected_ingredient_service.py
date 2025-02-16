@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import DetectedIngredient, Meal, Ingredient, ModifiedIngredient
+from travai.backend.database import SessionLocal
+from travai.backend.models import DetectedIngredient, Meal, Ingredient, ModifiedIngredient
 
-def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name: str, quantity_grams: float):
+def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name: str, quantity_grams: float, calculated_calories:float):
     """
     Creates a new detected ingredient and assigns it to a meal.
 
@@ -33,6 +33,7 @@ def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name
             ingredient_id=ingredient_id,
             ingredient_name=ingredient_name,
             quantity_grams=quantity_grams
+            calculated_calories=calculated_calories,
         )
 
         # Add the detected ingredient to the database
@@ -91,7 +92,7 @@ def get_detected_ingredients_by_meal(meal_id: int):
         session.close()
 
 
-def update_detected_ingredient(detected_ingredient_id: int, ingredient_name: str = None, quantity_grams: float = None):
+def update_detected_ingredient(detected_ingredient_id: int, ingredient_name: str = None, quantity_grams: float = None, calculated_calories: float = None):
     """
     Updates details of a detected ingredient in the database.
 
@@ -112,6 +113,8 @@ def update_detected_ingredient(detected_ingredient_id: int, ingredient_name: str
             detected_ingredient.ingredient_name = ingredient_name
         if quantity_grams is not None:
             detected_ingredient.quantity_grams = quantity_grams
+        if calculated_calories is not None:
+            detected_ingredient.calculated_calories = calculated_calories
 
         session.commit()
         session.refresh(detected_ingredient)
@@ -141,9 +144,6 @@ def delete_detected_ingredient(detected_ingredient_id: int):
         if not detected_ingredient:
             print("Detected ingredient not found.")
             return False
-
-        # Delete all modified ingredients linked to this detected ingredient
-        session.query(ModifiedIngredient).filter(ModifiedIngredient.detected_ingredient_id == detected_ingredient_id).delete()
 
         # Now delete the detected ingredient
         session.delete(detected_ingredient)

@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import ModifiedIngredient, DetectedIngredient
+from travai.backend.database import SessionLocal
+from travai.backend.models import ModifiedIngredient, DetectedIngredient
 
-def create_modified_ingredient(detected_ingredient_id: int, quantity_grams: float):
+def create_modified_ingredient(detected_ingredient_id: int, meal_id: int, quantity_grams: float, calculated_calories: float):
     """
     Creates a new modified ingredient and associates it with a detected ingredient.
 
@@ -22,7 +22,9 @@ def create_modified_ingredient(detected_ingredient_id: int, quantity_grams: floa
         # Create a new ModifiedIngredient object
         new_modified_ingredient = ModifiedIngredient(
             detected_ingredient_id=detected_ingredient_id,
-            quantity_grams=quantity_grams
+            meal_id=meal_id,
+            quantity_grams=quantity_grams,
+            calculated_calories=calculated_calories
         )
 
         # Add the modified ingredient to the database
@@ -80,8 +82,26 @@ def get_modified_ingredients_by_detected_ingredient(detected_ingredient_id: int)
     finally:
         session.close()
 
+def get_modified_ingredients_by_meal_id(meal_id: int):
+    """
+    Retrieves all modified ingredients linked to a specific detected ingredient.
 
-def update_modified_ingredient(modified_ingredient_id: int, quantity_grams: float = None):
+    :param detected_ingredient_id: The ID of the detected ingredient
+    :return: A list of ModifiedIngredient objects or an empty list if none found
+    """
+    session = SessionLocal()
+    try:
+        modified_ingredients = session.query(ModifiedIngredient).filter(ModifiedIngredient.meal_id == meal_id).all()
+        print(f"{len(modified_ingredients)} modified ingredients found for Meal ID {meal_id}")
+        return modified_ingredients
+    except Exception as e:
+        print(f"Error retrieving modified ingredients: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def update_modified_ingredient(modified_ingredient_id: int, quantity_grams: float = None, calculated_calories: float = None):
     """
     Updates details of a modified ingredient in the database.
 
@@ -99,6 +119,8 @@ def update_modified_ingredient(modified_ingredient_id: int, quantity_grams: floa
         # Update fields if new values are provided
         if quantity_grams is not None:
             modified_ingredient.quantity_grams = quantity_grams
+        if calculated_calories is not None:
+            modified_ingredient.calculated_calories = calculated_calories
 
         session.commit()
         session.refresh(modified_ingredient)

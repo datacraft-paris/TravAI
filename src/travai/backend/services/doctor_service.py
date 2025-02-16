@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import Doctor, Patient
+from travai.backend.database import SessionLocal
+from travai.backend.models import Doctor, Patient
 
 def create_doctor(first_name: str, last_name: str, email: str, password: str):
     """

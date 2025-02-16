@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: b9e740207cb5
+Revision ID: 9f771aa1b208
 Revises: 
-Create Date: 2025-02-15 20:29:14.955784
+Create Date: 2025-02-16 09:55:21.314129
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b9e740207cb5'
+revision: str = '9f771aa1b208'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -73,6 +73,7 @@ def upgrade() -> None:
     sa.Column('ingredient_id', sa.Integer(), nullable=False),
     sa.Column('ingredient_name', sa.String(), nullable=False),
     sa.Column('quantity_grams', sa.Float(), nullable=False),
+    sa.Column('calculated_calories', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['ingredient_id'], ['ingredients.ingredient_id'], ),
     sa.ForeignKeyConstraint(['meal_id'], ['meals.meal_id'], ),
     sa.PrimaryKeyConstraint('detected_ingredient_id')
@@ -80,9 +81,12 @@ def upgrade() -> None:
     op.create_index(op.f('ix_detected_ingredients_detected_ingredient_id'), 'detected_ingredients', ['detected_ingredient_id'], unique=False)
     op.create_table('modified_ingredients',
     sa.Column('modified_ingredient_id', sa.Integer(), nullable=False),
-    sa.Column('detected_ingredient_id', sa.Integer(), nullable=False),
+    sa.Column('meal_id', sa.Integer(), nullable=False),
+    sa.Column('detected_ingredient_id', sa.Integer(), nullable=True),
     sa.Column('quantity_grams', sa.Float(), nullable=False),
+    sa.Column('calculated_calories', sa.Float(), nullable=True),
     sa.ForeignKeyConstraint(['detected_ingredient_id'], ['detected_ingredients.detected_ingredient_id'], ),
+    sa.ForeignKeyConstraint(['meal_id'], ['meals.meal_id'], ),
     sa.PrimaryKeyConstraint('modified_ingredient_id')
     )
     op.create_index(op.f('ix_modified_ingredients_modified_ingredient_id'), 'modified_ingredients', ['modified_ingredient_id'], unique=False)
