@@ -35,11 +35,16 @@ you can do `touch .env` and then `vim .env` to edit your secrets and add your Sc
 
 ## Initialize alembic
 
-Run `alembic upgrade head` to setup the database schema
+Run:
+`cd src/travai`
+`alembic upgrade head`
+to setup the database schema
+
+then go back to the root of the project with: `cd ../..`
 
 ## Populate the database
 
-Run `python src/travai/backend/db_populate.py`
+Run `python src/travai/backend/populate_db.py`
 
 ## Setup the vector db
 

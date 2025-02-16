@@ -16,8 +16,11 @@ embeddings = model.encode(food_dataset['alim_nom_en'].tolist(), convert_to_tenso
 client = chromadb.PersistentClient(path="./chroma_db")
 
 # Delete the collection if it already exists
-# client.delete_collection('food_embeddings')
-# print(f"Deleted existing collection: {'food_embeddings'}")
+try:
+    client.delete_collection('food_embeddings')
+    print(f"Deleted existing collection: {'food_embeddings'}")
+except:
+    pass
 
 
 collection = client.create_collection('food_embeddings')

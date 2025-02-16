@@ -14,5 +14,4 @@ uv.lock
 *.sqlite3
 *.bin
 *.pickle
-*.csv
 *.db
