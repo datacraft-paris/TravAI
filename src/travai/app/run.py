@@ -351,7 +351,7 @@ def show_history_page():
                 st.session_state["show_ingredients_for"] = None  # Pour masquer si déjà affiché
             else:
                 st.session_state["show_ingredients_for"] = i
-            st.experimental_rerun()
+            st.rerun()
 
         # Affichage des ingrédients si "Voir plus" est activé pour cette entrée
         if st.session_state["show_ingredients_for"] == i:
