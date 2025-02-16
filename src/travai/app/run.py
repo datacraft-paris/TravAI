@@ -12,7 +12,7 @@ from datetime import datetime
 from travai.backend.vector_db.query import query_food
 from travai.backend.services.meal_service import create_meal, get_meals_by_patient
 from travai.backend.services.patient_service import get_patient_by_email, authenticate_user
-from travai.backend.services.detected_ingredient_service import create_detected_ingredient
+from travai.backend.services.detected_ingredient_service import create_detected_ingredient, get_detected_ingredients_by_meal
 from travai.backend.utils import get_sum_calories_per_meal_detected, get_sum_calories_per_meal_modified
 from travai.backend.services.modified_ingredient_service import create_modified_ingredient, update_modified_ingredient, delete_modified_ingredient
 import torch
@@ -274,53 +274,45 @@ def show_history_page():
     # Afficher les métriques et l'histogramme uniquement s'il y a des entrées dans le journal
     patient = get_patient_by_email(st.session_state['email'])
     patient_meals = get_meals_by_patient(patient.patient_id)
-    if "journal" in st.session_state and st.session_state["journal"]:
-        # --- Calcul de la quantité totale par repas ---
-        total_kcal_list = []
-        for meal in patient_meals:
-            total = get_sum_calories_per_meal_detected(meal.meal_id)
-            total_kcal_list.append(total)
+    # --- Calcul de la quantité totale par repas ---
+    total_kcal_list = []
+    for meal in patient_meals:
+        total = get_sum_calories_per_meal_detected(meal.meal_id)
+        total_kcal_list.append(total)
 
-        # Créer un DataFrame avec un identifiant pour chaque repas
-        import pandas as pd
-        print(total_kcal_list)
-        df_meals = pd.DataFrame({
-            "Repas": [f"Repas {i+1}" for i in range(len(total_kcal_list))],
-            "Calories totales (kcal)": total_kcal_list
-        })
+    # Créer un DataFrame avec un identifiant pour chaque repas
+    import pandas as pd
+    print(total_kcal_list)
+    df_meals = pd.DataFrame({
+        "Repas": [f"Repas {i+1}" for i in range(len(total_kcal_list))],
+        "Calories totales (kcal)": total_kcal_list
+    })
 
-        # Créer le graphique à barres avec Altair : 
-        # - x : le repas (catégoriel)
-        # - y : la quantité totale consommée
-        import altair as alt
-        bar_chart = alt.Chart(df_meals).mark_bar(opacity=0.7).encode(
-            x=alt.X("Repas:N", title="Repas"),
-            y=alt.Y("Calories totales (kcal):Q", title="Calories totales (kcal)")
-        ).properties(
-            title="Calories mangées par repas",
-            width=600,
-            height=300
+    # Créer le graphique à barres avec Altair :
+    # - x : le repas (catégoriel)
+    # - y : la quantité totale consommée
+    import altair as alt
+    bar_chart = alt.Chart(df_meals).mark_bar(opacity=0.7).encode(
+        x=alt.X("Repas:N", title="Repas"),
+        y=alt.Y("Calories totales (kcal):Q", title="Calories totales (kcal)")
+    ).properties(
+        title="Calories mangées par repas",
+        width=600,
+        height=300
 )
 
-        st.altair_chart(bar_chart, use_container_width=True)
+    st.altair_chart(bar_chart, use_container_width=True)
 
-        # --- Affichage des métriques ---
-        # Ici, on utilise des valeurs fixes pour l'instant
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric(label="Score de rigueur", value="10")
-        with col2:
-            st.metric(label="Taux d'objectif atteint", value="3")
-        with col3:
-            st.metric(label="Moyenne de la métrique traquée", value="5")
-    else:
-        st.info("No journal entries yet. Go to 'Meal Analysis' (or 'Take Photo' if patient) and analyze a meal.")
-
+    # --- Affichage des métriques ---
+    # Ici, on utilise des valeurs fixes pour l'instant
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(label="Score de rigueur", value="10")
+    with col2:
+        st.metric(label="Taux d'objectif atteint", value="3")
+    with col3:
+        st.metric(label="Moyenne de la métrique traquée", value="5")
     st.write("---")  # Séparateur visuel entre les métriques/histogramme et le tableau
-
-    # Si aucune entrée dans le journal, on arrête ici
-    if "journal" not in st.session_state or not st.session_state["journal"]:
-        return
 
     # ----- TABLEAU DES ENTRÉES DU JOURNAL -----
     # On crée un entête de tableau avec des colonnes
@@ -335,24 +327,23 @@ def show_history_page():
         st.session_state["show_ingredients_for"] = None
 
     # Parcourir chaque entrée du journal et afficher une ligne par repas
-    for i, entry in enumerate(st.session_state["journal"]):
+    for i, meal in enumerate(patient_meals):
         col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
         
         # 1) Date
-        dt_str = entry["datetime"]  # chaîne ISO, par exemple "2025-02-15T19:49:05.326333"
         try:
-            dt_obj = datetime.fromisoformat(dt_str)
+            dt_obj = meal.date_start
             date_formatted = dt_obj.strftime("%d/%m/%Y %H:%M:%S")
         except ValueError:
             date_formatted = dt_str
         col1.write(date_formatted)
 
         # 2) Nom du repas
-        dish_name = entry.get("dish_name", "Unknown Meal")
+        dish_name = meal.name
         col2.write(dish_name)
 
         # 3) Photo (thumbnail)
-        photo = entry.get("photo")
+        photo = meal.image_path
         if photo:
             if isinstance(photo, Image.Image):
                 col3.image(photo, width=80)
@@ -376,7 +367,14 @@ def show_history_page():
         # Affichage des ingrédients si "Voir plus" est activé pour cette entrée
         if st.session_state["show_ingredients_for"] == i:
             st.write("**Ingredients:**")
-            ingredients = entry.get("extracted_ingredients", [])
+            ingredients = get_detected_ingredients_by_meal(meal.meal_id)
+            ingredients = [
+                {
+                    "name": ingredient.ingredient_name,
+                    "quantity": ingredient.quantity_grams
+                }
+                for ingredient in ingredients
+            ]
             st.table(ingredients)
             st.write("---")
 
