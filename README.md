@@ -18,7 +18,9 @@ Apart from that, this project could benefit:
 - people who wish to monitor their nutrition, for example athletes who need to monitor protein intake or fat consumption.
 - anyone interested in better understanding their nutritional habits.
 
-### Install uv
+# Try the interface
+
+## Install uv
 Run
 `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
