@@ -32,7 +32,7 @@ def create_detected_ingredient(meal_id: int, ingredient_id: int, ingredient_name
             meal_id=meal_id,
             ingredient_id=ingredient_id,
             ingredient_name=ingredient_name,
-            quantity_grams=quantity_grams
+            quantity_grams=quantity_grams,
             calculated_calories=calculated_calories,
         )
 
