@@ -4,8 +4,6 @@ from travai.backend.database import SessionLocal, engine, Base
 from travai.backend.models import Patient, Doctor, Meal, Ingredient, DetectedIngredient, ModifiedIngredient, Goal
 
 
-Base.metadata.create_all(bind=engine)
-
 def populate_database():
     session = SessionLocal()
 
@@ -24,41 +22,6 @@ def populate_database():
         session.commit()
 
 
-
-        # Add meals to patients
-        meal1 = Meal(patient_id=patient1.patient_id, date_start=datetime.now(), image_path="meal1.jpg", name="Breakfast")
-        meal2 = Meal(patient_id=patient2.patient_id, date_start=datetime.now() - timedelta(days=1), image_path="meal2.jpg", name="Lunch")
-
-        session.add_all([meal1, meal2])
-        session.commit()
-
-        # Add ingredients
-        ingredient1 = Ingredient(name="Chicken Breast", calories_per_100g=165.0)
-        ingredient2 = Ingredient(name="Rice", calories_per_100g=130.0)
-
-        session.add_all([ingredient1, ingredient2])
-        session.commit()
-
-        # Add detected ingredients
-        detected1 = DetectedIngredient(meal_id=meal1.meal_id, ingredient_id=ingredient1.ingredient_id, ingredient_name="Chicken Breast", quantity_grams=150.0)
-        detected2 = DetectedIngredient(meal_id=meal2.meal_id, ingredient_id=ingredient2.ingredient_id, ingredient_name="Rice", quantity_grams=200.0)
-
-        session.add_all([detected1, detected2])
-        session.commit()
-
-        # Add modified ingredients
-        modified1 = ModifiedIngredient(detected_ingredient_id=detected1.detected_ingredient_id, quantity_grams=180.0)
-        modified2 = ModifiedIngredient(detected_ingredient_id=detected2.detected_ingredient_id, quantity_grams=250.0)
-
-        session.add_all([modified1, modified2])
-        session.commit()
-
-        # Add goals
-        goal1 = Goal(patient_id=patient1.patient_id, date_start=datetime.now(), date_end=datetime.now() + timedelta(days=30), calories_in_grams_per_day=2000.0)
-        goal2 = Goal(patient_id=patient2.patient_id, date_start=datetime.now(), date_end=datetime.now() + timedelta(days=15), calories_in_grams_per_day=1800.0)
-
-        session.add_all([goal1, goal2])
-        session.commit()
 
         print("Base de données peuplée avec succès !")
 
